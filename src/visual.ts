@@ -35,7 +35,7 @@ module powerbi.extensibility.visual {
         constructor(options: VisualConstructorOptions) {
             console.log('Visual constructor', options);
             this.target = options.element;
-            this.updateCount = 0;
+            this.updateCount = 50;
             if (typeof document !== "undefined") {
                 const new_p: HTMLElement = document.createElement("p");
                 new_p.appendChild(document.createTextNode("Update count:"));
@@ -50,11 +50,11 @@ module powerbi.extensibility.visual {
         public update(options: VisualUpdateOptions) {
             this.settings = Visual.parseSettings(options && options.dataViews && options.dataViews[0]);
             console.log('Visual update', options);
-            /*
+            
             if (typeof this.textNode !== "undefined") {
                 this.textNode.textContent = (this.updateCount++).toString();
             }
-            */
+            
             this.target.innerHTML = '<p> Updates: ${(this.updateCount++)} </p>';
         }
 
