@@ -26,11 +26,24 @@
 
 module powerbi.extensibility.visual {
     "use strict";
-    function visualTransform(options: VisualUpdateOptions, host: IVisualHost)
+
+    interface BarchartViewModel
+    {
+        dataPoints: BarchartDataPoint[];
+        dataMax: number;
+    }
+
+    interface BarchartDataPoint
+    {
+        value: PrimitiveValue;
+        category: string;
+    }
+
+    function visualTransform(options: VisualUpdateOptions, host: IVisualHost): BarchartViewModel
     {
         let dataViews = options.dataViews;
 
-        let dataInfo = 
+        let dataInfo: BarchartViewModel = 
         {
             dataPoints: [],
             dataMax: 0
@@ -48,7 +61,7 @@ module powerbi.extensibility.visual {
         let category = categorical.categories[0];
         let dataValue = categorical.values[0];
 
-        let dataPoints = [];
+        let dataPoints: BarchartDataPoint[] = [];
         let dataMax: number;
 
         for(let i = 0, len = Math.max(category.values.length, dataValue.values.length); i < len; i++)
@@ -83,7 +96,7 @@ module powerbi.extensibility.visual {
         }
 
         public update(options: VisualUpdateOptions) {
-             let transformedData = visualTransform(options, this.host);
+             let transformedData: BarchartViewModel = visualTransform(options, this.host);
              let width = options.viewport.width;
              let height = options.viewport.height;
 
