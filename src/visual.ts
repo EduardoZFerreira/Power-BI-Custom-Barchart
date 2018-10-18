@@ -26,28 +26,53 @@
 
 module powerbi.extensibility.visual {
     "use strict";
-    let staticData = [
+    function visualTransform(options: VisualUpdateOptions, host: IVisualHost)
+    {
+        let dataViews = options.dataViews;
+
+        let dataInfo = 
         {
-            value: 10,
-            category: "China"
-        },
+            dataPoints: [],
+            dataMax: 0
+        };
+
+        if(!dataViews 
+            || !dataViews[0] 
+            || !dataViews[0].categorical 
+            || !dataViews[0].categorical.categories 
+            || !dataViews[0].categorical.categories[0].source 
+            || !dataViews[0].categorical.values)
+            return dataInfo;
+
+        let categorical = dataViews[0].categorical;
+        let category = categorical.categories[0];
+        let dataValue = categorical.values[0];
+
+        let dataPoints = [];
+        let dataMax: number;
+
+        for(let i = 0, len = Math.max(category.values.length, dataValue.values.length); i < len; i++)
         {
-            value: 8,
-            category: "USA"
-        },
-        {
-            value: 11,
-            category: "India"
-        },
-        {
-            value: 5,
-            category: "Germany"
+            dataPoints.push({
+                category: <string>category.values[i],
+                value: dataValue.values[i]
+            });
         }
-    ];
+
+        dataMax = <number>dataValue.maxLocal;
+
+        return {
+            dataPoints: dataPoints,
+            dataMax: dataMax
+        };
+    }
+
     export class Visual implements IVisual {
+        private host: IVisualHost;
         private svg: d3.Selection<SVGElement>;
         private barContainer: d3.Selection<SVGElement>;
         constructor(options: VisualConstructorOptions) {
+            this.host = options.host;
             this.svg = d3.select(options.element)
             .append('svg')
             .classed('barchart', true);
@@ -58,6 +83,7 @@ module powerbi.extensibility.visual {
         }
 
         public update(options: VisualUpdateOptions) {
+             let transformedData = visualTransform(options, this.host);
              let width = options.viewport.width;
              let height = options.viewport.height;
 
@@ -67,15 +93,16 @@ module powerbi.extensibility.visual {
              });
              
              let yScale = d3.scale.linear()
-             .domain([0, 11])
+             .domain([0, transformedData.dataMax])
              .range([height, 0]);
+
              let xScale = d3.scale.ordinal()
-             .domain(staticData.map(dataPoint => dataPoint.category))
+             .domain(transformedData.dataPoints.map(dataPoint => dataPoint.category))
              .rangeRoundBands([0, width], 0.1, 0.2);
 
              let bars = this.barContainer
                 .selectAll('.bar')
-                .data(staticData);
+                .data(transformedData.dataPoints);
 
                 bars.enter()
                 .append('rect')
