@@ -37,6 +37,8 @@ module powerbi.extensibility.visual {
     {
         value: PrimitiveValue;
         category: string;
+        color: string;
+        selectionID: ISelectionId;
     }
 
     function visualTransform(options: VisualUpdateOptions, host: IVisualHost): BarchartViewModel
@@ -64,11 +66,17 @@ module powerbi.extensibility.visual {
         let dataPoints: BarchartDataPoint[] = [];
         let dataMax: number;
 
+        let colorPalette: IColorPalette = host.colorPalette;
+
         for(let i = 0, len = Math.max(category.values.length, dataValue.values.length); i < len; i++)
         {
             dataPoints.push({
                 category: <string>category.values[i],
-                value: dataValue.values[i]
+                value: dataValue.values[i],
+                color: colorPalette.getColor(<string>category.values[i]).value,
+                selectionID: host.createSelectionIdBuilder()
+                    .withCategory(category, i)
+                    .createSelectionId()
             });
         }
 
@@ -84,7 +92,10 @@ module powerbi.extensibility.visual {
         private host: IVisualHost;
         private svg: d3.Selection<SVGElement>;
         private barContainer: d3.Selection<SVGElement>;
+        private selectionManager: ISelectionManager;
+
         constructor(options: VisualConstructorOptions) {
+            this.selectionManager = options.host.createSelectionManager();
             this.host = options.host;
             this.svg = d3.select(options.element)
             .append('svg')
@@ -124,8 +135,23 @@ module powerbi.extensibility.visual {
                 width: xScale.rangeBand(),
                 height: data => height - yScale(<number>data.value),
                 x: data => xScale(data.category),
-                y: data => yScale(<number>data.value)
+                y: data => yScale(<number>data.value),
+                fill: data => data.color
             })
+
+            let selectionManager = this.selectionManager;
+
+            bars.on('click', function(dataPoint){
+                selectionManager.select(dataPoint.selectionID)
+                    .then((ids: ISelectionId[]) => {
+                        bars.attr({
+                            'fill-opacity': ids.length > 0 ? .5 : 1
+                        });
+                        d3.select(this).attr({
+                            'fill-opacity': 1
+                        });
+                    })
+            });
 
             bars.exit().remove();
         }
