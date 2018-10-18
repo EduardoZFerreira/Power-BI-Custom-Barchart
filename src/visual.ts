@@ -93,6 +93,7 @@ module powerbi.extensibility.visual {
         private svg: d3.Selection<SVGElement>;
         private barContainer: d3.Selection<SVGElement>;
         private selectionManager: ISelectionManager;
+        private xAxis: d3.Selection<SVGElement>;
 
         constructor(options: VisualConstructorOptions) {
             this.selectionManager = options.host.createSelectionManager();
@@ -104,6 +105,10 @@ module powerbi.extensibility.visual {
             this.barContainer = this.svg
             .append('g')
             .classed('barContainer', true);
+
+            this.xAxis = this.svg
+                .append('g')
+                .classed('xAxis', true);
         }
 
         public update(options: VisualUpdateOptions) {
@@ -115,6 +120,12 @@ module powerbi.extensibility.visual {
                 width: width,
                 height: height
              });
+
+             height = height - 25;
+
+             this.xAxis.style({
+                'font-size': d3.min([height, width]) * 0.04
+             });
              
              let yScale = d3.scale.linear()
              .domain([0, transformedData.dataMax])
@@ -123,6 +134,13 @@ module powerbi.extensibility.visual {
              let xScale = d3.scale.ordinal()
              .domain(transformedData.dataPoints.map(dataPoint => dataPoint.category))
              .rangeRoundBands([0, width], 0.1, 0.2);
+
+             let xAxis = d3.svg.axis()
+                .scale(xScale)
+                .orient('bottom');
+
+            this.xAxis.attr({'transform': 'translate(0, ' + height +')'})
+                .call(xAxis);
 
              let bars = this.barContainer
                 .selectAll('.bar')
