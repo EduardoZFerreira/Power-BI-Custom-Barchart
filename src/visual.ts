@@ -31,6 +31,7 @@ module powerbi.extensibility.visual {
     {
         dataPoints: BarchartDataPoint[];
         dataMax: number;
+        settings: BarchartSettings;
     }
 
     interface BarchartDataPoint
@@ -41,14 +42,47 @@ module powerbi.extensibility.visual {
         selectionID: ISelectionId;
     }
 
+    interface BarchartSettings
+    {
+        enableAxis: {
+            show: boolean;
+        }
+    }
+
+    function getOptionValue<T>(objects: DataViewObject, objectName: string, propertyName: string, defaultValue: T): T
+    {
+        if(objects)
+        {
+            let object = objects[objectName];
+            if(object)
+            {
+                let property: T = <T>object[propertyName];
+                if(property != undefined)
+                {
+                    return property;
+                }
+            }
+        }
+        return defaultValue;
+    }
+
+    // This function is responsible for transforming the data selected by the user into 
+    // data to be used as source for the chart
+
     function visualTransform(options: VisualUpdateOptions, host: IVisualHost): BarchartViewModel
     {
         let dataViews = options.dataViews;
+        let defaultSettings: BarchartSettings = {
+            enableAxis: {
+                show: false
+            }
+        };
 
         let dataInfo: BarchartViewModel = 
         {
             dataPoints: [],
-            dataMax: 0
+            dataMax: 0,
+            settings: defaultSettings
         };
 
         if(!dataViews 
@@ -67,6 +101,12 @@ module powerbi.extensibility.visual {
         let dataMax: number;
 
         let colorPalette: IColorPalette = host.colorPalette;
+        let objects = dataViews[0].metadata.objects;
+        let barchartSettings: BarchartSettings = {
+            enableAxis: {
+                show: getOptionValue<boolean>(objects, 'enableAxis', 'show', defaultSettings.enableAxis.show)
+            }
+        };
 
         for(let i = 0, len = Math.max(category.values.length, dataValue.values.length); i < len; i++)
         {
@@ -84,7 +124,8 @@ module powerbi.extensibility.visual {
 
         return {
             dataPoints: dataPoints,
-            dataMax: dataMax
+            dataMax: dataMax,
+            settings: barchartSettings
         };
     }
 
@@ -94,6 +135,7 @@ module powerbi.extensibility.visual {
         private barContainer: d3.Selection<SVGElement>;
         private selectionManager: ISelectionManager;
         private xAxis: d3.Selection<SVGElement>;
+        private chartSettings: BarchartSettings;
 
         constructor(options: VisualConstructorOptions) {
             this.selectionManager = options.host.createSelectionManager();
@@ -113,6 +155,7 @@ module powerbi.extensibility.visual {
 
         public update(options: VisualUpdateOptions) {
              let transformedData: BarchartViewModel = visualTransform(options, this.host);
+             this.chartSettings = transformedData.settings;
              let width = options.viewport.width;
              let height = options.viewport.height;
 
@@ -120,8 +163,12 @@ module powerbi.extensibility.visual {
                 width: width,
                 height: height
              });
-
-             height = height - 25;
+             
+             if(this.chartSettings.enableAxis.show)
+             {
+                height = height - 25;
+             }
+             
 
              this.xAxis.style({
                 'font-size': d3.min([height, width]) * 0.04
@@ -172,6 +219,25 @@ module powerbi.extensibility.visual {
             });
 
             bars.exit().remove();
+        }
+
+        public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+            let objectName = options.objectName;
+            let objectEnumeration: VisualObjectInstance[] = [];
+
+            switch(objectName)
+            {
+                case 'enableAxis': 
+                    objectEnumeration.push({
+                        objectName: objectName,
+                        properties: {
+                            show: this.chartSettings.enableAxis.show
+                        },
+                        selector: null
+                    });
+            }
+
+            return objectEnumeration;
         }
 
     }
