@@ -53,9 +53,7 @@ module powerbi.extensibility.visual {
             
             if (typeof this.textNode !== "undefined") {
                 this.textNode.textContent = (this.updateCount++).toString();
-            }
-            
-            this.target.innerHTML = '<p> Updates: ${(this.updateCount++)} </p>';
+            }            
         }
 
         private static parseSettings(dataView: DataView): VisualSettings {
