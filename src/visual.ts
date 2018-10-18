@@ -26,13 +26,35 @@
 
 module powerbi.extensibility.visual {
     "use strict";
+    let staticData = [
+        {
+            value: 10,
+            category: "China"
+        },
+        {
+            value: 8,
+            category: "USA"
+        },
+        {
+            value: 11,
+            category: "India"
+        },
+        {
+            value: 5,
+            category: "Germany"
+        }
+    ];
     export class Visual implements IVisual {
         private svg: d3.Selection<SVGElement>;
-
+        private barContainer: d3.Selection<SVGElement>;
         constructor(options: VisualConstructorOptions) {
             this.svg = d3.select(options.element)
             .append('svg')
             .classed('barchart', true);
+
+            this.barContainer = this.svg
+            .append('g')
+            .classed('barContainer', true);
         }
 
         public update(options: VisualUpdateOptions) {
@@ -43,13 +65,29 @@ module powerbi.extensibility.visual {
                 width: width,
                 height: height
              });
-             let rect = this.svg.append('rect')
-             .attr(
-             {
-                width: 50,
-                height: 50,
-                fill: 'red'
-             });    
+             
+             let yScale = d3.scale.linear()
+             .domain([0, 11])
+             .range([height, 0]);
+             let xScale = d3.scale.ordinal()
+             .domain(staticData.map(dataPoint => dataPoint.category))
+             .rangeRoundBands([0, width], 0.1, 0.2);
+
+             let bars = this.barContainer
+                .selectAll('.bar')
+                .data(staticData);
+
+                bars.enter()
+                .append('rect')
+                .classed('bar', true);
+            bars.attr({
+                width: xScale.rangeBand(),
+                height: data => height - yScale(<number>data.value),
+                x: data => xScale(data.category),
+                y: data => yScale(<number>data.value)
+            })
+
+            bars.exit().remove();
         }
 
     }
