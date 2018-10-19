@@ -27,6 +27,9 @@
 module powerbi.extensibility.visual {
     "use strict";
 
+    // This interface defines the contract for the chart itself, which will have 
+    // an array of data points(the bars themselves), a maximum amount of data, and base 
+    // settings for the chart
     interface BarchartViewModel
     {
         dataPoints: BarchartDataPoint[];
@@ -34,6 +37,7 @@ module powerbi.extensibility.visual {
         settings: BarchartSettings;
     }
 
+    // This interface defines the contract for each bar that will be displayed on the chart
     interface BarchartDataPoint
     {
         value: PrimitiveValue;
@@ -42,6 +46,7 @@ module powerbi.extensibility.visual {
         selectionID: ISelectionId;
     }
 
+    // This interface defines the contract for the settings of the chart    
     interface BarchartSettings
     {
         enableAxis: {
@@ -49,6 +54,10 @@ module powerbi.extensibility.visual {
         }
     }
 
+    /*
+        This function receives an array of data view objects containing the metadata for the chart,
+        then searches for a specified object, and returns a property of generic type
+    */
     function getOptionValue<T>(objects: DataViewObject, objectName: string, propertyName: string, defaultValue: T): T
     {
         if(objects)
@@ -67,7 +76,8 @@ module powerbi.extensibility.visual {
     }
 
     // This function is responsible for transforming the data selected by the user into 
-    // data to be used as source for the chart
+    // data to be used as source for the chart, as for the initial settings that can be
+    // altered by the user.
 
     function visualTransform(options: VisualUpdateOptions, host: IVisualHost): BarchartViewModel
     {
@@ -78,6 +88,7 @@ module powerbi.extensibility.visual {
             }
         };
 
+        // Initializes the barchart
         let dataInfo: BarchartViewModel = 
         {
             dataPoints: [],
@@ -85,6 +96,7 @@ module powerbi.extensibility.visual {
             settings: defaultSettings
         };
 
+        // Tests if there is data
         if(!dataViews 
             || !dataViews[0] 
             || !dataViews[0].categorical 
@@ -93,13 +105,18 @@ module powerbi.extensibility.visual {
             || !dataViews[0].categorical.values)
             return dataInfo;
 
+        // Categorical data mapping will have different categories of data,
+        // each category will have a value, this value will then be used to 
+        // present the data
+        // Categorical > Category > Value
         let categorical = dataViews[0].categorical;
         let category = categorical.categories[0];
         let dataValue = categorical.values[0];
-
+        
+        // Initializes the data point array (The array with the bars)
         let dataPoints: BarchartDataPoint[] = [];
         let dataMax: number;
-
+        
         let colorPalette: IColorPalette = host.colorPalette;
         let objects = dataViews[0].metadata.objects;
         let barchartSettings: BarchartSettings = {
@@ -108,6 +125,8 @@ module powerbi.extensibility.visual {
             }
         };
 
+        // Handles each value of the data provided by the user to the array of data points
+        // based on the amount of data in the category array, also sets a color and id for each bar
         for(let i = 0, len = Math.max(category.values.length, dataValue.values.length); i < len; i++)
         {
             dataPoints.push({
@@ -140,6 +159,8 @@ module powerbi.extensibility.visual {
         constructor(options: VisualConstructorOptions) {
             this.selectionManager = options.host.createSelectionManager();
             this.host = options.host;
+            // SVG stands for Scalable Vector Graphics, a D3 node that 
+            // allows the creation of vector graphics based on data
             this.svg = d3.select(options.element)
             .append('svg')
             .classed('barchart', true);
@@ -159,16 +180,20 @@ module powerbi.extensibility.visual {
              let width = options.viewport.width;
              let height = options.viewport.height;
 
+             // The width and height of the bars will be based on available screen width, 
+             // and the values entered by the user for the height
              this.svg.attr({
                 width: width,
                 height: height
              });
              
+             // If there is a legend on screen, the bars need to go above it
              if(this.chartSettings.enableAxis.show)
              {
                 height = height - 25;
              }
              
+             // This section makes everything responsible -- START --
 
              this.xAxis.style({
                 'font-size': d3.min([height, width]) * 0.04
@@ -204,8 +229,11 @@ module powerbi.extensibility.visual {
                 fill: data => data.color
             })
 
+            // This section makes everything responsible -- END --
+
             let selectionManager = this.selectionManager;
 
+            // Adding interaction when the user clicks a specific bar
             bars.on('click', function(dataPoint){
                 selectionManager.select(dataPoint.selectionID)
                     .then((ids: ISelectionId[]) => {
